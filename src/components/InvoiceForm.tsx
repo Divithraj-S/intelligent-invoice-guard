@@ -1,19 +1,25 @@
 import { useState } from "react";
-import { FileText, Send, Brain } from "lucide-react";
+import { FileText, Send, Brain, Upload, ScanLine } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { InvoiceInput } from "@/lib/fraudEngine";
+import type { FraudResult } from "@/lib/fraudEngine";
+import CSVUpload from "./CSVUpload";
+import FileUploadOCR from "./FileUploadOCR";
 
 interface Props {
   onAnalyze: (input: InvoiceInput) => void;
+  onBulkResults: (results: FraudResult[]) => void;
+  onFileResult: (result: FraudResult) => void;
   isAnalyzing: boolean;
 }
 
-const InvoiceForm = ({ onAnalyze, isAnalyzing }: Props) => {
+const InvoiceForm = ({ onAnalyze, onBulkResults, onFileResult, isAnalyzing }: Props) => {
   const [amount, setAmount] = useState("");
   const [isDuplicate, setIsDuplicate] = useState(false);
   const [vendorRisk, setVendorRisk] = useState<"low" | "medium" | "high">("low");
@@ -47,74 +53,75 @@ const InvoiceForm = ({ onAnalyze, isAnalyzing }: Props) => {
           <div className="p-2 rounded-lg bg-primary/10">
             <FileText className="h-5 w-5 text-primary" />
           </div>
-          Invoice Data Input
+          Multi-Input Invoice Module
         </CardTitle>
-        <p className="text-sm text-muted-foreground">Enter invoice details for fraud analysis</p>
+        <p className="text-sm text-muted-foreground">Choose your input method: manual entry, CSV bulk upload, or file OCR</p>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="space-y-2">
-            <Label htmlFor="vendorName">Vendor Name</Label>
-            <Input
-              id="vendorName"
-              placeholder="e.g. Acme Corp"
-              value={vendorName}
-              onChange={(e) => setVendorName(e.target.value)}
-              maxLength={100}
-            />
-            {errors.vendorName && <p className="text-sm text-destructive">{errors.vendorName}</p>}
-          </div>
+        <Tabs defaultValue="manual" className="w-full">
+          <TabsList className="grid w-full grid-cols-3 mb-4">
+            <TabsTrigger value="manual" className="gap-1.5 text-xs sm:text-sm">
+              <FileText className="h-3.5 w-3.5" />
+              Manual
+            </TabsTrigger>
+            <TabsTrigger value="csv" className="gap-1.5 text-xs sm:text-sm">
+              <Upload className="h-3.5 w-3.5" />
+              CSV Upload
+            </TabsTrigger>
+            <TabsTrigger value="file" className="gap-1.5 text-xs sm:text-sm">
+              <ScanLine className="h-3.5 w-3.5" />
+              File OCR
+            </TabsTrigger>
+          </TabsList>
 
-          <div className="space-y-2">
-            <Label htmlFor="amount">Invoice Amount ($)</Label>
-            <Input
-              id="amount"
-              type="number"
-              placeholder="e.g. 15000"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              min="0"
-              step="0.01"
-            />
-            {errors.amount && <p className="text-sm text-destructive">{errors.amount}</p>}
-          </div>
+          <TabsContent value="manual">
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="space-y-2">
+                <Label htmlFor="vendorName">Vendor Name</Label>
+                <Input id="vendorName" placeholder="e.g. Acme Corp" value={vendorName} onChange={(e) => setVendorName(e.target.value)} maxLength={100} />
+                {errors.vendorName && <p className="text-sm text-destructive">{errors.vendorName}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="amount">Invoice Amount ($)</Label>
+                <Input id="amount" type="number" placeholder="e.g. 15000" value={amount} onChange={(e) => setAmount(e.target.value)} min="0" step="0.01" />
+                {errors.amount && <p className="text-sm text-destructive">{errors.amount}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label>Vendor Risk Level</Label>
+                <Select value={vendorRisk} onValueChange={(v) => setVendorRisk(v as "low" | "medium" | "high")}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">🟢 Low Risk</SelectItem>
+                    <SelectItem value="medium">🟡 Medium Risk</SelectItem>
+                    <SelectItem value="high">🔴 High Risk</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div>
+                  <Label htmlFor="duplicate" className="cursor-pointer">Duplicate Invoice</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">Has this invoice been submitted before?</p>
+                </div>
+                <Switch id="duplicate" checked={isDuplicate} onCheckedChange={setIsDuplicate} />
+              </div>
+              <Button type="submit" className="w-full gap-2" size="lg" disabled={isAnalyzing}>
+                {isAnalyzing ? (
+                  <><Brain className="h-4 w-4 animate-spin" /> Analyzing...</>
+                ) : (
+                  <><Send className="h-4 w-4" /> Analyze Invoice</>
+                )}
+              </Button>
+            </form>
+          </TabsContent>
 
-          <div className="space-y-2">
-            <Label>Vendor Risk Level</Label>
-            <Select value={vendorRisk} onValueChange={(v) => setVendorRisk(v as "low" | "medium" | "high")}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="low">🟢 Low Risk</SelectItem>
-                <SelectItem value="medium">🟡 Medium Risk</SelectItem>
-                <SelectItem value="high">🔴 High Risk</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <TabsContent value="csv">
+            <CSVUpload onBulkResults={onBulkResults} />
+          </TabsContent>
 
-          <div className="flex items-center justify-between rounded-lg border p-4">
-            <div>
-              <Label htmlFor="duplicate" className="cursor-pointer">Duplicate Invoice</Label>
-              <p className="text-xs text-muted-foreground mt-0.5">Has this invoice been submitted before?</p>
-            </div>
-            <Switch id="duplicate" checked={isDuplicate} onCheckedChange={setIsDuplicate} />
-          </div>
-
-          <Button type="submit" className="w-full gap-2" size="lg" disabled={isAnalyzing}>
-            {isAnalyzing ? (
-              <>
-                <Brain className="h-4 w-4 animate-spin" />
-                Analyzing...
-              </>
-            ) : (
-              <>
-                <Send className="h-4 w-4" />
-                Analyze Invoice
-              </>
-            )}
-          </Button>
-        </form>
+          <TabsContent value="file">
+            <FileUploadOCR onResult={onFileResult} />
+          </TabsContent>
+        </Tabs>
       </CardContent>
     </Card>
   );
