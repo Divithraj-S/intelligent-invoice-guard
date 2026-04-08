@@ -1,16 +1,80 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState, useCallback } from "react";
+import { Brain, Shield } from "lucide-react";
+import InvoiceForm from "@/components/InvoiceForm";
+import FraudResultPanel from "@/components/FraudResultPanel";
+import InvoiceHistory from "@/components/InvoiceHistory";
+import DashboardStats from "@/components/DashboardStats";
+import { analyzeFraud, type InvoiceInput, type FraudResult } from "@/lib/fraudEngine";
 
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
+const Index = () => {
+  const [result, setResult] = useState<FraudResult | null>(null);
+  const [history, setHistory] = useState<FraudResult[]>([]);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  const handleAnalyze = useCallback((input: InvoiceInput) => {
+    setIsAnalyzing(true);
+    setResult(null);
+    // Simulate ML processing delay
+    setTimeout(() => {
+      const res = analyzeFraud(input);
+      setResult(res);
+      setHistory((prev) => [res, ...prev]);
+      setIsAnalyzing(false);
+    }, 1500);
+  }, []);
+
   return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
+    <div className="min-h-screen">
+      {/* Header */}
+      <header className="gradient-bg text-primary-foreground">
+        <div className="container py-8 md:py-12">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-2.5 rounded-xl bg-primary-foreground/10 backdrop-blur-sm">
+              <Shield className="h-7 w-7" />
+            </div>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+                Intelligent Invoice Fraud Detection
+              </h1>
+              <p className="text-sm md:text-base opacity-80 flex items-center gap-1.5 mt-0.5">
+                <Brain className="h-4 w-4" />
+                Powered by Hybrid ML + Rule-Based Analysis
+              </p>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Dashboard Stats */}
+      <div className="container -mt-6 relative z-10 mb-6">
+        <DashboardStats history={history} />
+      </div>
+
+      {/* Main Content */}
+      <main className="container pb-12">
+        <div className="grid lg:grid-cols-2 gap-6">
+          {/* Left Column */}
+          <div className="space-y-6">
+            <InvoiceForm onAnalyze={handleAnalyze} isAnalyzing={isAnalyzing} />
+            <InvoiceHistory history={history} />
+          </div>
+
+          {/* Right Column */}
+          <div>
+            {result ? (
+              <FraudResultPanel result={result} />
+            ) : (
+              <div className="rounded-xl border-2 border-dashed border-muted p-12 text-center text-muted-foreground animate-fade-in">
+                <Brain className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                <p className="font-medium">No analysis yet</p>
+                <p className="text-sm mt-1">Submit an invoice to see fraud detection results</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </main>
     </div>
   );
 };
-
-const Index = PlaceholderIndex;
 
 export default Index;
