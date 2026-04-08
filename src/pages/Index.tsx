@@ -4,6 +4,7 @@ import InvoiceForm from "@/components/InvoiceForm";
 import FraudResultPanel from "@/components/FraudResultPanel";
 import InvoiceHistory from "@/components/InvoiceHistory";
 import DashboardStats from "@/components/DashboardStats";
+import DashboardCharts from "@/components/DashboardCharts";
 import { analyzeFraud, type InvoiceInput, type FraudResult } from "@/lib/fraudEngine";
 
 const Index = () => {
@@ -14,7 +15,6 @@ const Index = () => {
   const handleAnalyze = useCallback((input: InvoiceInput) => {
     setIsAnalyzing(true);
     setResult(null);
-    // Simulate ML processing delay
     setTimeout(() => {
       const res = analyzeFraud(input);
       setResult(res);
@@ -23,9 +23,18 @@ const Index = () => {
     }, 1500);
   }, []);
 
+  const handleBulkResults = useCallback((results: FraudResult[]) => {
+    setHistory((prev) => [...results, ...prev]);
+    if (results.length > 0) setResult(results[0]);
+  }, []);
+
+  const handleFileResult = useCallback((res: FraudResult) => {
+    setResult(res);
+    setHistory((prev) => [res, ...prev]);
+  }, []);
+
   return (
     <div className="min-h-screen">
-      {/* Header */}
       <header className="gradient-bg text-primary-foreground">
         <div className="container py-8 md:py-12">
           <div className="flex items-center gap-3 mb-3">
@@ -38,28 +47,27 @@ const Index = () => {
               </h1>
               <p className="text-sm md:text-base opacity-80 flex items-center gap-1.5 mt-0.5">
                 <Brain className="h-4 w-4" />
-                Powered by Hybrid ML + Rule-Based Analysis
+                ML + Rule-Based Analysis · CSV · PDF/Image OCR
               </p>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Dashboard Stats */}
       <div className="container -mt-6 relative z-10 mb-6">
         <DashboardStats history={history} />
       </div>
 
-      {/* Main Content */}
-      <main className="container pb-12">
+      <main className="container pb-12 space-y-6">
         <div className="grid lg:grid-cols-2 gap-6">
-          {/* Left Column */}
           <div className="space-y-6">
-            <InvoiceForm onAnalyze={handleAnalyze} isAnalyzing={isAnalyzing} />
-            <InvoiceHistory history={history} />
+            <InvoiceForm
+              onAnalyze={handleAnalyze}
+              onBulkResults={handleBulkResults}
+              onFileResult={handleFileResult}
+              isAnalyzing={isAnalyzing}
+            />
           </div>
-
-          {/* Right Column */}
           <div>
             {result ? (
               <FraudResultPanel result={result} />
@@ -72,6 +80,10 @@ const Index = () => {
             )}
           </div>
         </div>
+
+        <DashboardCharts history={history} />
+
+        <InvoiceHistory history={history} />
       </main>
     </div>
   );
