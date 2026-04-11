@@ -83,9 +83,7 @@ const Index = () => {
           </div>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
-          <DashboardCharts history={history} />
-        </div>
+        <DashboardCharts history={history} />
 
         <BehaviorTrendChart history={history} />
 
