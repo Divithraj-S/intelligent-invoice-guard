@@ -1,10 +1,11 @@
-import { ShieldCheck, ShieldAlert, AlertTriangle, Brain, CheckCircle2, XCircle, Info, ThumbsUp, ThumbsDown, Bell } from "lucide-react";
+import { ShieldCheck, ShieldAlert, AlertTriangle, Brain, CheckCircle2, XCircle, Info, ThumbsUp, ThumbsDown, Bell, Activity, Building2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import type { FraudResult } from "@/lib/fraudEngine";
+import { vendorStore } from "@/lib/vendorStore";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -18,6 +19,17 @@ const riskConfig = {
   high: { icon: ShieldAlert, label: "High Risk", color: "text-danger", bg: "bg-danger/10", border: "border-danger/20", badge: "bg-danger text-danger-foreground" },
 };
 
+const severityIcon = {
+  info: Info,
+  warning: AlertTriangle,
+  critical: XCircle,
+};
+const severityColor = {
+  info: "text-primary",
+  warning: "text-warning",
+  critical: "text-danger",
+};
+
 const FraudResultPanel = ({ result }: Props) => {
   const [feedback, setFeedback] = useState<"fraud" | "genuine" | null>(null);
   const config = riskConfig[result.riskLevel];
@@ -25,7 +37,10 @@ const FraudResultPanel = ({ result }: Props) => {
 
   const handleFeedback = (type: "fraud" | "genuine") => {
     setFeedback(type);
-    toast.success(`Feedback recorded: marked as ${type}`, { description: "Thank you for improving the model." });
+    vendorStore.recordFeedback(result.invoice.vendorName, type === "fraud");
+    toast.success(`Feedback recorded: marked as ${type}`, {
+      description: "Vendor profile updated — system improves using feedback.",
+    });
   };
 
   return (
@@ -68,15 +83,59 @@ const FraudResultPanel = ({ result }: Props) => {
             </div>
           </div>
 
+          {/* Anomaly + Vendor Risk row */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground flex items-center gap-1"><Activity className="h-3.5 w-3.5" /> Anomaly Score</span>
+                <span className="font-semibold">{result.anomalyScore}%</span>
+              </div>
+              <Progress value={result.anomalyScore} className="h-2.5" />
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground flex items-center gap-1"><Building2 className="h-3.5 w-3.5" /> Vendor Risk</span>
+                <span className="font-semibold">{result.vendorRiskScore}%</span>
+              </div>
+              <Progress value={result.vendorRiskScore} className="h-2.5" />
+            </div>
+          </div>
+
           {/* Alert */}
           {result.alertSent && (
             <div className="flex items-center gap-2 rounded-lg bg-danger/10 p-3 text-sm">
               <Bell className="h-4 w-4 text-danger" />
-              <span className="text-danger font-medium">Email alert sent for high-risk invoice</span>
+              <span className="text-danger font-medium">Email alert sent — invoice escalated for investigation</span>
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Behavioral Insights */}
+      {result.behavioralInsights.length > 0 && (
+        <Card className="shadow-lg border-0 shadow-primary/5">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Activity className="h-4 w-4 text-primary" />
+              </div>
+              Behavioral Analysis
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {result.behavioralInsights.map((insight, i) => {
+              const SevIcon = severityIcon[insight.severity];
+              return (
+                <div key={i} className="flex items-start gap-2.5 text-sm">
+                  <SevIcon className={`h-4 w-4 mt-0.5 shrink-0 ${severityColor[insight.severity]}`} />
+                  <span>{insight.message}</span>
+                  <Badge variant="outline" className="ml-auto text-xs shrink-0">{insight.type}</Badge>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Explainable AI */}
       <Card className="shadow-lg border-0 shadow-primary/5">
@@ -117,7 +176,8 @@ const FraudResultPanel = ({ result }: Props) => {
       {/* Feedback */}
       <Card className="shadow-lg border-0 shadow-primary/5">
         <CardContent className="pt-5">
-          <p className="text-sm font-medium mb-3">Was this classification correct?</p>
+          <p className="text-sm font-medium mb-1">Was this classification correct?</p>
+          <p className="text-xs text-muted-foreground mb-3">Your feedback updates the vendor profile and improves future detection accuracy.</p>
           <div className="flex gap-2">
             <Button
               variant={feedback === "genuine" ? "default" : "outline"}
