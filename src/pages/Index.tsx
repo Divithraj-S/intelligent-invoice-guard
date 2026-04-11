@@ -5,6 +5,8 @@ import FraudResultPanel from "@/components/FraudResultPanel";
 import InvoiceHistory from "@/components/InvoiceHistory";
 import DashboardStats from "@/components/DashboardStats";
 import DashboardCharts from "@/components/DashboardCharts";
+import BehaviorTrendChart from "@/components/BehaviorTrendChart";
+import VendorProfiles from "@/components/VendorProfiles";
 import { analyzeFraud, type InvoiceInput, type FraudResult } from "@/lib/fraudEngine";
 
 const Index = () => {
@@ -43,11 +45,11 @@ const Index = () => {
             </div>
             <div>
               <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-                Intelligent Invoice Fraud Detection
+                Adaptive Invoice Fraud Detection
               </h1>
               <p className="text-sm md:text-base opacity-80 flex items-center gap-1.5 mt-0.5">
                 <Brain className="h-4 w-4" />
-                ML + Rule-Based Analysis · CSV · PDF/Image OCR
+                ML + Behavioral Analysis · Anomaly Detection · OCR
               </p>
             </div>
           </div>
@@ -83,7 +85,12 @@ const Index = () => {
 
         <DashboardCharts history={history} />
 
-        <InvoiceHistory history={history} />
+        <BehaviorTrendChart history={history} />
+
+        <div className="grid lg:grid-cols-2 gap-6">
+          <VendorProfiles refreshKey={history.length} />
+          <InvoiceHistory history={history} />
+        </div>
       </main>
     </div>
   );

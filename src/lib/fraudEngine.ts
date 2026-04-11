@@ -1,3 +1,5 @@
+import { vendorStore, type BehavioralInsight } from "./vendorStore";
+
 export interface InvoiceInput {
   invoiceId: string;
   amount: number;
@@ -10,18 +12,23 @@ export interface FraudResult {
   fraudProbability: number;
   confidenceScore: number;
   riskLevel: "low" | "medium" | "high";
-  decision: "Approve" | "Review" | "Fraud Alert";
+  decision: "Approve" | "Hold for Review" | "Escalate";
   explanations: string[];
   ruleFlags: { rule: string; triggered: boolean }[];
+  behavioralInsights: BehavioralInsight[];
+  anomalyScore: number;
   timestamp: Date;
   invoice: InvoiceInput;
   alertSent: boolean;
+  vendorRiskScore: number;
 }
 
 export function analyzeFraud(input: InvoiceInput): FraudResult {
   const explanations: string[] = [];
   const ruleFlags: { rule: string; triggered: boolean }[] = [];
   let ruleScore = 0;
+
+  // --- Rule-based checks ---
 
   // Rule 1: Duplicate
   const dupTriggered = input.isDuplicate;
@@ -51,23 +58,58 @@ export function analyzeFraud(input: InvoiceInput): FraudResult {
     explanations.push("Vendor is classified as medium risk");
   }
 
-  // Simulate ML prediction with some randomness
-  const mlBase = ruleScore * 0.8 + Math.random() * 20;
+  // --- Behavioral Analysis ---
+  const behavioralInsights = vendorStore.analyzeBehavior(input.vendorName, input.amount);
+  let behaviorScore = 0;
+  for (const insight of behavioralInsights) {
+    if (insight.severity === "critical") behaviorScore += 20;
+    else if (insight.severity === "warning") behaviorScore += 10;
+  }
+
+  // Add behavioral explanations
+  const criticalInsights = behavioralInsights.filter((i) => i.severity === "critical");
+  for (const ci of criticalInsights) {
+    explanations.push(ci.message);
+  }
+
+  // Behavioral rule flag
+  ruleFlags.push({ rule: "Behavioral Anomaly Detection", triggered: behaviorScore > 0 });
+
+  // --- Anomaly Score (Isolation Forest concept) ---
+  const vendorProfile = vendorStore.getProfile(input.vendorName.toLowerCase());
+  let anomalyScore = 0;
+  if (vendorProfile && vendorProfile.totalInvoices >= 2) {
+    const deviation = Math.abs(input.amount - vendorProfile.averageAmount) / (vendorProfile.averageAmount || 1);
+    anomalyScore = Math.min(Math.round(deviation * 40 + Math.random() * 10), 100);
+  } else {
+    anomalyScore = Math.round(15 + Math.random() * 15);
+  }
+  ruleFlags.push({ rule: "Anomaly Score Check (>50)", triggered: anomalyScore > 50 });
+  if (anomalyScore > 50) {
+    ruleScore += 15;
+    if (!criticalInsights.length) {
+      explanations.push(`Statistical anomaly detected (score: ${anomalyScore}/100)`);
+    }
+  }
+
+  // --- ML Simulation ---
+  const mlBase = (ruleScore + behaviorScore) * 0.7 + Math.random() * 20;
   const mlScore = Math.min(Math.max(mlBase, 5), 98);
 
-  // Combine: 60% ML + 40% rules
-  const fraudProbability = Math.round(mlScore * 0.6 + ruleScore * 0.4);
-  const confidenceScore = Math.round(70 + Math.random() * 25);
+  // Combined: 50% ML + 30% rules + 20% behavior
+  const fraudProbability = Math.round(mlScore * 0.5 + ruleScore * 0.3 + behaviorScore * 0.2);
+  const confidenceScore = Math.round(65 + Math.min(vendorProfile?.totalInvoices || 0, 10) * 2 + Math.random() * 15);
 
+  // --- Decision ---
   let riskLevel: FraudResult["riskLevel"];
   let decision: FraudResult["decision"];
 
   if (fraudProbability >= 60) {
     riskLevel = "high";
-    decision = "Fraud Alert";
+    decision = "Escalate";
   } else if (fraudProbability >= 30) {
     riskLevel = "medium";
-    decision = "Review";
+    decision = "Hold for Review";
   } else {
     riskLevel = "low";
     decision = "Approve";
@@ -78,6 +120,9 @@ export function analyzeFraud(input: InvoiceInput): FraudResult {
     explanations.push("All validation rules passed successfully");
   }
 
+  // Record in vendor store
+  const updatedProfile = vendorStore.recordInvoice(input.vendorName, input.amount, riskLevel === "high");
+
   return {
     fraudProbability,
     confidenceScore,
@@ -85,8 +130,11 @@ export function analyzeFraud(input: InvoiceInput): FraudResult {
     decision,
     explanations,
     ruleFlags,
+    behavioralInsights,
+    anomalyScore,
     timestamp: new Date(),
     invoice: input,
     alertSent: riskLevel === "high",
+    vendorRiskScore: updatedProfile.riskScore,
   };
 }
