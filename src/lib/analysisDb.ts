@@ -3,7 +3,7 @@ import type { FraudResult, InvoiceInput } from "./fraudEngine";
 import type { BehavioralInsight } from "./vendorStore";
 
 export async function saveAnalysis(result: FraudResult) {
-  const { error } = await supabase.from("analysis_history").insert({
+  const { error } = await (supabase as any).from("analysis_history").insert({
     invoice_id: result.invoice.invoiceId,
     vendor_name: result.invoice.vendorName,
     amount: result.invoice.amount,
