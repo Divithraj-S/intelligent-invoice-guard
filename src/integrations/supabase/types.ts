@@ -14,7 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      analysis_history: {
+        Row: {
+          alert_sent: boolean
+          amount: number
+          anomaly_score: number
+          behavioral_insights: Json
+          confidence_score: number
+          created_at: string
+          decision: string
+          explanations: Json
+          fraud_probability: number
+          id: string
+          invoice_id: string
+          is_duplicate: boolean
+          risk_level: string
+          rule_flags: Json
+          vendor_name: string
+          vendor_risk_level: string
+          vendor_risk_score: number
+        }
+        Insert: {
+          alert_sent?: boolean
+          amount: number
+          anomaly_score?: number
+          behavioral_insights?: Json
+          confidence_score: number
+          created_at?: string
+          decision: string
+          explanations?: Json
+          fraud_probability: number
+          id?: string
+          invoice_id: string
+          is_duplicate?: boolean
+          risk_level: string
+          rule_flags?: Json
+          vendor_name: string
+          vendor_risk_level: string
+          vendor_risk_score?: number
+        }
+        Update: {
+          alert_sent?: boolean
+          amount?: number
+          anomaly_score?: number
+          behavioral_insights?: Json
+          confidence_score?: number
+          created_at?: string
+          decision?: string
+          explanations?: Json
+          fraud_probability?: number
+          id?: string
+          invoice_id?: string
+          is_duplicate?: boolean
+          risk_level?: string
+          rule_flags?: Json
+          vendor_name?: string
+          vendor_risk_level?: string
+          vendor_risk_score?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
