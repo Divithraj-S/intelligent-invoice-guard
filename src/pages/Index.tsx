@@ -36,11 +36,13 @@ const Index = () => {
   const handleBulkResults = useCallback((results: FraudResult[]) => {
     setHistory((prev) => [...results, ...prev]);
     if (results.length > 0) setResult(results[0]);
+    results.forEach((r) => saveAnalysis(r));
   }, []);
 
   const handleFileResult = useCallback((res: FraudResult) => {
     setResult(res);
     setHistory((prev) => [res, ...prev]);
+    saveAnalysis(res);
   }, []);
 
   return (
