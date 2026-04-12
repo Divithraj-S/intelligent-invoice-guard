@@ -1,91 +1,144 @@
-import { Crosshair } from "lucide-react";
+import { Crosshair, EyeOff } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { OCRRegion } from "@/lib/ocrEngine";
 
 interface Props {
   regions: OCRRegion[];
   showOverlay?: boolean;
+  confidenceThreshold?: number;
 }
 
+const CONFIDENCE_THRESHOLD = 70;
+
 function confidenceColor(c: number) {
-  if (c >= 90) return "text-safe";
-  if (c >= 75) return "text-warning";
+  if (c >= 85) return "text-safe";
+  if (c >= 70) return "text-warning";
   return "text-danger";
 }
 
 function confidenceBg(c: number) {
-  if (c >= 90) return "bg-safe/10";
-  if (c >= 75) return "bg-warning/10";
+  if (c >= 85) return "bg-safe/10";
+  if (c >= 70) return "bg-warning/10";
   return "bg-danger/10";
 }
 
-const OCRRegionMap = ({ regions, showOverlay = true }: Props) => (
-  <div className="space-y-2">
-    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-      <Crosshair className="h-3.5 w-3.5" />
-      Extracted Regions
-    </p>
+function borderClass(c: number) {
+  if (c >= 85) return "border-safe/60 bg-safe/5";
+  if (c >= 70) return "border-warning/60 bg-warning/5";
+  return "border-danger/60 bg-danger/5";
+}
 
-    {/* Visual bounding-box overlay */}
-    {showOverlay && (
-      <div className="relative w-full aspect-[8.5/11] rounded-lg border bg-muted/30 overflow-hidden">
-        {/* Simulated document background lines */}
-        {Array.from({ length: 20 }).map((_, i) => (
-          <div
-            key={i}
-            className="absolute left-[10%] h-px bg-muted-foreground/10"
-            style={{
-              top: `${5 + i * 4.5}%`,
-              width: `${40 + Math.random() * 40}%`,
-            }}
-          />
-        ))}
+function hasValidData(r: OCRRegion): boolean {
+  if (r.extractedValue === null || r.extractedValue === undefined) return false;
+  if (typeof r.extractedValue === "string" && r.extractedValue.trim() === "") return false;
+  if (typeof r.extractedValue === "number" && (isNaN(r.extractedValue) || r.extractedValue === 0)) return false;
+  return true;
+}
 
-        {regions.map((r, i) => (
-          <div
-            key={i}
-            className={`absolute border-2 rounded-sm flex items-end justify-start ${
-              r.confidence >= 90
-                ? "border-safe/60 bg-safe/5"
-                : r.confidence >= 75
-                ? "border-warning/60 bg-warning/5"
-                : "border-danger/60 bg-danger/5"
-            }`}
-            style={{
-              left: `${r.boundingBox.x * 100}%`,
-              top: `${r.boundingBox.y * 100}%`,
-              width: `${r.boundingBox.w * 100}%`,
-              height: `${r.boundingBox.h * 100}%`,
-            }}
-          >
-            <span className="text-[9px] font-semibold px-1 leading-tight bg-background/80 rounded-sm">
-              {r.label}
-            </span>
-          </div>
-        ))}
-      </div>
-    )}
+const OCRRegionMap = ({ regions, showOverlay = true, confidenceThreshold = CONFIDENCE_THRESHOLD }: Props) => {
+  const visibleRegions = regions.filter(
+    (r) => r.confidence >= confidenceThreshold && hasValidData(r)
+  );
+  const hiddenRegions = regions.filter(
+    (r) => r.confidence < confidenceThreshold || !hasValidData(r)
+  );
 
-    {/* Detail list */}
-    <div className="grid gap-1.5">
-      {regions.map((r, i) => (
-        <div
-          key={i}
-          className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${confidenceBg(r.confidence)}`}
-        >
-          <div className="min-w-0 flex-1">
-            <p className="font-medium text-xs">{r.label}</p>
-            <p className="text-xs text-muted-foreground truncate">
-              {r.extractedText}
-            </p>
-          </div>
-          <Badge variant="outline" className={`shrink-0 text-[10px] ${confidenceColor(r.confidence)}`}>
-            {r.confidence.toFixed(0)}%
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+        <Crosshair className="h-3.5 w-3.5" />
+        Extracted Regions
+        {visibleRegions.length < regions.length && (
+          <Badge variant="secondary" className="text-[10px] ml-1">
+            {visibleRegions.length}/{regions.length} detected
           </Badge>
+        )}
+      </p>
+
+      {/* Visual bounding-box overlay — only visible regions */}
+      {showOverlay && visibleRegions.length > 0 && (
+        <div className="relative w-full aspect-[8.5/11] rounded-lg border bg-muted/30 overflow-hidden">
+          {Array.from({ length: 20 }).map((_, i) => (
+            <div
+              key={i}
+              className="absolute left-[10%] h-px bg-muted-foreground/10"
+              style={{
+                top: `${5 + i * 4.5}%`,
+                width: `${40 + Math.random() * 40}%`,
+              }}
+            />
+          ))}
+
+          {visibleRegions.map((r, i) => (
+            <div
+              key={i}
+              className={`absolute border-2 rounded-sm flex items-end justify-start ${borderClass(r.confidence)}`}
+              style={{
+                left: `${r.boundingBox.x * 100}%`,
+                top: `${r.boundingBox.y * 100}%`,
+                width: `${r.boundingBox.w * 100}%`,
+                height: `${r.boundingBox.h * 100}%`,
+              }}
+            >
+              <span className="text-[9px] font-semibold px-1 leading-tight bg-background/80 rounded-sm flex items-center gap-1">
+                {r.label}
+                <span className={`${confidenceColor(r.confidence)}`}>
+                  {r.confidence.toFixed(0)}%
+                </span>
+              </span>
+            </div>
+          ))}
         </div>
-      ))}
+      )}
+
+      {/* Detail list — visible regions */}
+      {visibleRegions.length > 0 ? (
+        <div className="grid gap-1.5">
+          {visibleRegions.map((r, i) => (
+            <div
+              key={i}
+              className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${confidenceBg(r.confidence)}`}
+            >
+              <div className="min-w-0 flex-1">
+                <p className="font-medium text-xs">{r.label}</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {r.extractedText}
+                </p>
+              </div>
+              <Badge variant="outline" className={`shrink-0 text-[10px] ${confidenceColor(r.confidence)}`}>
+                {r.confidence.toFixed(0)}%
+              </Badge>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-lg border border-dashed border-muted-foreground/25 p-4 text-center">
+          <EyeOff className="h-5 w-5 mx-auto mb-1.5 text-muted-foreground/40" />
+          <p className="text-xs text-muted-foreground">
+            No regions detected with sufficient confidence
+          </p>
+        </div>
+      )}
+
+      {/* Hidden / low-confidence fields */}
+      {hiddenRegions.length > 0 && (
+        <div className="space-y-1">
+          {hiddenRegions.map((r, i) => (
+            <div
+              key={i}
+              className="flex items-center gap-2 rounded-md px-3 py-1.5 text-xs text-muted-foreground bg-muted/30"
+            >
+              <EyeOff className="h-3 w-3 shrink-0 opacity-50" />
+              <span className="font-medium">{r.label}</span>
+              <span className="ml-auto text-[10px]">
+                Field not detected — low OCR confidence ({r.confidence.toFixed(0)}%)
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
-  </div>
-);
+  );
+};
 
 export default OCRRegionMap;
