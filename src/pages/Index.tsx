@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Brain, Shield } from "lucide-react";
 import InvoiceForm from "@/components/InvoiceForm";
 import FraudResultPanel from "@/components/FraudResultPanel";
@@ -8,11 +8,18 @@ import DashboardCharts from "@/components/DashboardCharts";
 import BehaviorTrendChart from "@/components/BehaviorTrendChart";
 import VendorProfiles from "@/components/VendorProfiles";
 import { analyzeFraud, type InvoiceInput, type FraudResult } from "@/lib/fraudEngine";
+import { saveAnalysis, loadHistory } from "@/lib/analysisDb";
 
 const Index = () => {
   const [result, setResult] = useState<FraudResult | null>(null);
   const [history, setHistory] = useState<FraudResult[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  useEffect(() => {
+    loadHistory().then((saved) => {
+      if (saved.length > 0) setHistory(saved);
+    });
+  }, []);
 
   const handleAnalyze = useCallback((input: InvoiceInput) => {
     setIsAnalyzing(true);
@@ -21,6 +28,7 @@ const Index = () => {
       const res = analyzeFraud(input);
       setResult(res);
       setHistory((prev) => [res, ...prev]);
+      saveAnalysis(res);
       setIsAnalyzing(false);
     }, 1500);
   }, []);
