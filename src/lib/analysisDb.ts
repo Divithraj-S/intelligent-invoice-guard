@@ -24,7 +24,7 @@ export async function saveAnalysis(result: FraudResult) {
 }
 
 export async function loadHistory(): Promise<FraudResult[]> {
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from("analysis_history")
     .select("*")
     .order("created_at", { ascending: false })
