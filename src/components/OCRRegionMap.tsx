@@ -55,41 +55,6 @@ const OCRRegionMap = ({ regions, showOverlay = true, confidenceThreshold = CONFI
         )}
       </p>
 
-      {/* Visual bounding-box overlay — only visible regions */}
-      {showOverlay && visibleRegions.length > 0 && (
-        <div className="relative w-full aspect-[8.5/11] rounded-lg border bg-muted/30 overflow-hidden">
-          {Array.from({ length: 20 }).map((_, i) => (
-            <div
-              key={i}
-              className="absolute left-[10%] h-px bg-muted-foreground/10"
-              style={{
-                top: `${5 + i * 4.5}%`,
-                width: `${40 + Math.random() * 40}%`,
-              }}
-            />
-          ))}
-
-          {visibleRegions.map((r, i) => (
-            <div
-              key={i}
-              className={`absolute border-2 rounded-sm flex items-end justify-start ${borderClass(r.confidence)}`}
-              style={{
-                left: `${r.boundingBox.x * 100}%`,
-                top: `${r.boundingBox.y * 100}%`,
-                width: `${r.boundingBox.w * 100}%`,
-                height: `${r.boundingBox.h * 100}%`,
-              }}
-            >
-              <span className="text-[9px] font-semibold px-1 leading-tight bg-background/80 rounded-sm flex items-center gap-1">
-                {r.label}
-                <span className={`${confidenceColor(r.confidence)}`}>
-                  {r.confidence.toFixed(0)}%
-                </span>
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
 
       {/* Detail list — visible regions */}
       {visibleRegions.length > 0 ? (
