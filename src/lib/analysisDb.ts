@@ -3,7 +3,11 @@ import type { FraudResult, InvoiceInput } from "./fraudEngine";
 import type { BehavioralInsight } from "./vendorStore";
 
 export async function saveAnalysis(result: FraudResult) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
   const { error } = await (supabase as any).from("analysis_history").insert({
+    user_id: user.id,
     invoice_id: result.invoice.invoiceId,
     vendor_name: result.invoice.vendorName,
     amount: result.invoice.amount,
@@ -35,7 +39,7 @@ export async function loadHistory(): Promise<FraudResult[]> {
     return [];
   }
 
-  return data.map((row) => ({
+  return data.map((row: any) => ({
     fraudProbability: row.fraud_probability,
     confidenceScore: row.confidence_score,
     riskLevel: row.risk_level as FraudResult["riskLevel"],

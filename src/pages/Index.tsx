@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
-import { Brain, Shield } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Brain, Shield, LogOut } from "lucide-react";
 import InvoiceForm from "@/components/InvoiceForm";
 import FraudResultPanel from "@/components/FraudResultPanel";
 import InvoiceHistory from "@/components/InvoiceHistory";
@@ -9,17 +10,29 @@ import BehaviorTrendChart from "@/components/BehaviorTrendChart";
 import VendorProfiles from "@/components/VendorProfiles";
 import { analyzeFraud, type InvoiceInput, type FraudResult } from "@/lib/fraudEngine";
 import { saveAnalysis, loadHistory } from "@/lib/analysisDb";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
 
 const Index = () => {
+  const { user, loading, signOut } = useAuth();
+  const navigate = useNavigate();
   const [result, setResult] = useState<FraudResult | null>(null);
   const [history, setHistory] = useState<FraudResult[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   useEffect(() => {
-    loadHistory().then((saved) => {
-      if (saved.length > 0) setHistory(saved);
-    });
-  }, []);
+    if (!loading && !user) {
+      navigate("/auth", { replace: true });
+    }
+  }, [user, loading, navigate]);
+
+  useEffect(() => {
+    if (user) {
+      loadHistory().then((saved) => {
+        if (saved.length > 0) setHistory(saved);
+      });
+    }
+  }, [user]);
 
   const handleAnalyze = useCallback((input: InvoiceInput) => {
     setIsAnalyzing(true);
@@ -45,22 +58,46 @@ const Index = () => {
     saveAnalysis(res);
   }, []);
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
+
+  if (!user) return null;
+
   return (
     <div className="min-h-screen">
       <header className="gradient-bg text-primary-foreground">
         <div className="container py-8 md:py-12">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2.5 rounded-xl bg-primary-foreground/10 backdrop-blur-sm">
-              <Shield className="h-7 w-7" />
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-primary-foreground/10 backdrop-blur-sm">
+                <Shield className="h-7 w-7" />
+              </div>
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+                  Adaptive Invoice Fraud Detection
+                </h1>
+                <p className="text-sm md:text-base opacity-80 flex items-center gap-1.5 mt-0.5">
+                  <Brain className="h-4 w-4" />
+                  ML + Behavioral Analysis · Anomaly Detection · OCR
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-                Adaptive Invoice Fraud Detection
-              </h1>
-              <p className="text-sm md:text-base opacity-80 flex items-center gap-1.5 mt-0.5">
-                <Brain className="h-4 w-4" />
-                ML + Behavioral Analysis · Anomaly Detection · OCR
-              </p>
+            <div className="flex items-center gap-3">
+              <span className="text-sm opacity-80 hidden md:inline">{user.email}</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={signOut}
+                className="text-primary-foreground hover:bg-primary-foreground/10"
+              >
+                <LogOut className="h-4 w-4 mr-1" />
+                Sign Out
+              </Button>
             </div>
           </div>
         </div>
