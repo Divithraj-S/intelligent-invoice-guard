@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
-import { Brain, Shield } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Brain, Shield, LogOut } from "lucide-react";
 import InvoiceForm from "@/components/InvoiceForm";
 import FraudResultPanel from "@/components/FraudResultPanel";
 import InvoiceHistory from "@/components/InvoiceHistory";
@@ -9,8 +10,12 @@ import BehaviorTrendChart from "@/components/BehaviorTrendChart";
 import VendorProfiles from "@/components/VendorProfiles";
 import { analyzeFraud, type InvoiceInput, type FraudResult } from "@/lib/fraudEngine";
 import { saveAnalysis, loadHistory } from "@/lib/analysisDb";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
 
 const Index = () => {
+  const { user, loading, signOut } = useAuth();
+  const navigate = useNavigate();
   const [result, setResult] = useState<FraudResult | null>(null);
   const [history, setHistory] = useState<FraudResult[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
