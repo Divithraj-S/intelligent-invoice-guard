@@ -21,10 +21,29 @@ const Index = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   useEffect(() => {
-    loadHistory().then((saved) => {
-      if (saved.length > 0) setHistory(saved);
-    });
-  }, []);
+    if (!loading && !user) {
+      navigate("/auth", { replace: true });
+    }
+  }, [user, loading, navigate]);
+
+  useEffect(() => {
+    if (user) {
+      loadHistory().then((saved) => {
+        if (saved.length > 0) setHistory(saved);
+      });
+    }
+  }, [user]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
+
+  if (!user) return null;
+
 
   const handleAnalyze = useCallback((input: InvoiceInput) => {
     setIsAnalyzing(true);
